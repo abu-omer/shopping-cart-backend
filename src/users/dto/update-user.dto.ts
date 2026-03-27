@@ -1,12 +1,7 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateUserDto, AddressDto } from './create-user.dto';
-import {
-  IsOptional,
-  IsMongoId,
-  IsArray,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { PartialType } from "@nestjs/mapped-types";
+import { Type } from "class-transformer";
+import { IsArray, IsMongoId, IsOptional, ValidateNested } from "class-validator";
+import { CreateUserDto, UpdateAddressDto } from "./create-user.dto";
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
@@ -15,11 +10,11 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => AddressDto)
-  shippingAddresses?: AddressDto[];
+  @Type(() => UpdateAddressDto)
+  shippingAddresses?: UpdateAddressDto[];
 
   @IsOptional()
   @IsArray()
-  @IsMongoId({ each: true, message: 'Each favorite product must be a valid Mongo ID' })
+  @IsMongoId({ each: true })
   favoriteProducts?: string[];
 }

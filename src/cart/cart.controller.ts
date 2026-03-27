@@ -22,16 +22,16 @@ import {
 import { CartService } from './cart.service';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; 
-import { GetUser } from '../auth/decorators/get-user.decorator'; 
-import { User } from 'src/users/entities/user.entity'; 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from 'src/users/entities/user.entity';
 
-@ApiTags('Cart') 
+@ApiTags('Cart')
 @Controller('cart')
-@UseGuards(JwtAuthGuard) 
-@ApiBearerAuth() 
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(private readonly cartService: CartService) { }
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -40,16 +40,16 @@ export class CartController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getMyCart(@GetUser() user: User) {
     if (!user || !user._id) {
-      
+
       throw new UnauthorizedException('User is not authenticated');
     }
-    
+
     return this.cartService.getOrCreateCart(user._id.toString());
   }
-  
+
 
   @Post('items')
-  @HttpCode(HttpStatus.OK) 
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Add a product to the cart or update its quantity if already present' })
   @ApiResponse({ status: 200, description: 'Product added/updated in cart successfully.' })
   @ApiResponse({ status: 400, description: 'Invalid input or insufficient stock.' })
@@ -60,7 +60,7 @@ export class CartController {
       throw new UnauthorizedException('User is not authenticated');
     }
 
-    
+
     return this.cartService.addItem(user._id.toString(), addItemDto);
   }
 
@@ -84,12 +84,11 @@ export class CartController {
     if (!user || !user._id) {
       throw new UnauthorizedException('User is not authenticated');
     }
-    
+
     return this.cartService.updateItemQuantity(user._id.toString(), productId, updateCartItemDto.quantity);
   }
 
   @Delete('items/:productId')
-  @HttpCode(HttpStatus.NO_CONTENT) 
   @ApiOperation({ summary: 'Remove a specific product from the cart' })
   @ApiParam({
     name: 'productId',
@@ -103,12 +102,13 @@ export class CartController {
     if (!user || !user._id) {
       throw new UnauthorizedException('User is not authenticated');
     }
-    
-    await this.cartService.removeItem(user._id.toString(), productId);
+
+    const updatedCart = await this.cartService.removeItem(user._id.toString(), productId);
+    return updatedCart;
+
   }
 
   @Delete()
-  @HttpCode(HttpStatus.NO_CONTENT) 
   @ApiOperation({ summary: 'Clear all items from the shopping cart' })
   @ApiResponse({ status: 204, description: 'Cart cleared successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -116,7 +116,10 @@ export class CartController {
     if (!user || !user._id) {
       throw new UnauthorizedException('User is not authenticated');
     }
-    
-    await this.cartService.clearCart(user._id.toString());
+    console.log('yser', user)
+
+    const updatedCart = await this.cartService.clearCart(user._id.toString());
+    console.log('upda', updatedCart)
+    return updatedCart
   }
 }

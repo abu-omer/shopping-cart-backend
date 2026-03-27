@@ -1,60 +1,61 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-
+@Schema({ _id: false })
 export class Address {
-  
-  @Prop({ required: true })
+
+  @Prop()
   street: string;
 
-  @Prop({ required: true })
+  @Prop()
   city: string;
 
-  @Prop({ required: true })
+  @Prop()
   state: string;
 
-  @Prop({ required: true })
+  @Prop()
   zipCode: string;
 
-  @Prop({ required: true, default: 'US' })
+  @Prop({ required: true, default: 'Sudan' })
   country: string;
 }
+export const AddressSchema = SchemaFactory.createForClass(Address);
 
 export type UserDocument = User & Document;
 
 @Schema({
-  timestamps: true, 
-  collection: 'users' 
+  timestamps: true,
+  collection: 'users'
 })
 export class User {
   _id?: Types.ObjectId;
 
-  @Prop({ required: true, unique: true,}) 
-  username: string;
-  @Prop({ required: true, unique: true, index: true })
+  // @Prop({ required: true, unique: true, })
+  // username: string;
+  @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop({ required: true, select: false }) 
-  password: string; 
+  @Prop({ required: true, select: false })
+  password: string;
 
-  @Prop({ required: true })
-  firstName: string;
+  @Prop()
+  firstName?: string;
 
-  @Prop({ required: true })
-  lastName: string;
+  @Prop()
+  lastName?: string;
 
   @Prop({ default: null })
-  phoneNumber: string;
-  @Prop({ type: String, enum: ['customer', 'admin'], default: 'customer', index: true }) 
+  phoneNumber?: string;
+  @Prop({ type: String, enum: ['customer', 'admin'], default: 'customer', index: true })
   role: string;
 
   @Prop({ type: [Address], default: [] })
-  shippingAddresses: Address[];
+  shippingAddresses?: Address[];
 
   @Prop({ type: [Types.ObjectId], default: [], ref: 'Product' })
-  favoriteProducts: Types.ObjectId[]; 
+  favoriteProducts: Types.ObjectId[];
 
- 
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

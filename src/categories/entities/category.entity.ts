@@ -8,6 +8,8 @@ export type CategoryDocument = Category & Document;
 export class Category {
   @Prop({ required: true })
   name: string;
+  @Prop({ required: true })
+  image: string;
 
   @Prop({ default: true })
   isActive: boolean;

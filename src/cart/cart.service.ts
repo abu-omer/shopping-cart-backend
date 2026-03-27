@@ -7,17 +7,16 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { Cart, CartDocument, CartItem  } from './entities/cart.entity';
+import { Cart, CartDocument, CartItem } from './entities/cart.entity';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
-import { ProductsService } from '../products/products.service'; 
-import { Product } from '../products/entities/product.entity'; 
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class CartService {
   constructor(
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    private productsService: ProductsService, 
-  ) {}
+    private productsService: ProductsService,
+  ) { }
 
   async getOrCreateCart(userId: string): Promise<CartDocument> {
     let cart = await this.cartModel
@@ -27,7 +26,7 @@ export class CartService {
       //   model: 'Product', // Ensure this matches the 'ref' in CartItemSchema
       // })
       .exec();
-    
+
 
     if (!cart) {
       cart = new this.cartModel({
@@ -38,13 +37,13 @@ export class CartService {
       await cart.save();
     }
     cart.lastAccessedAt = new Date();
-    await cart.save(); 
+    await cart.save();
     return cart;
   }
 
   async addItem(userId: string, addItemDto: AddItemToCartDto): Promise<CartDocument> {
     const { productId, quantity } = addItemDto;
-
+    console.log('item', addItemDto)
     const product = await this.productsService.findById(productId);
     if (!product) {
       throw new NotFoundException(`Product with ID "${productId}" not found.`);
@@ -56,7 +55,7 @@ export class CartService {
       (item) => item.productId.toString() === productId,
     );
 
-    let newQuantityInCart = quantity; 
+    let newQuantityInCart = quantity;
 
     if (existingItemIndex > -1) {
       newQuantityInCart = cart.items[existingItemIndex].quantity + quantity;
@@ -76,8 +75,8 @@ export class CartService {
         productId: new Types.ObjectId(productId),
         productName: product.name,
         quantity,
-        price: product.price, 
-        image: product.image, 
+        price: product.price,
+        imageFiles: product.imageFiles,
       };
       cart.items.push(newCartItem);
     }
@@ -89,7 +88,7 @@ export class CartService {
     }
   }
 
-  
+
   async updateItemQuantity(
     userId: string,
     productId: string,
@@ -129,44 +128,48 @@ export class CartService {
     }
   }
 
- 
- async removeItem(userId: string, productId: string): Promise<CartDocument> {
-  const cart = await this.getOrCreateCart(userId);
-  const initialItemCount = cart.items.length;
 
-  if (!Types.ObjectId.isValid(productId)) {
-    throw new BadRequestException(`Invalid product ID: "${productId}"`);
+  async removeItem(userId: string, productId: string): Promise<CartDocument> {
+    const cart = await this.getOrCreateCart(userId);
+    const initialItemCount = cart.items.length;
+    console.log('id', productId)
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException(`Invalid product ID: "${productId}"`);
+    }
+
+    const productObjectId = new Types.ObjectId(productId);
+    console.log('pro', productId)
+
+    cart.items = cart.items.filter(item => {
+      // Handle populated productId (object) or raw ObjectId
+      const currentId = item.productId instanceof Types.ObjectId
+        ? item.productId
+        : (item.productId as any)._id;
+
+      return !currentId.equals(productObjectId);
+    });
+
+
+    if (cart.items.length === initialItemCount) {
+      throw new NotFoundException(`Product with ID "${productId}" not found in cart.`);
+    }
+
+    try {
+      console.log('cart', cart)
+
+      return await cart.save();
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to remove item from cart.');
+    }
   }
-
-  const productObjectId = new Types.ObjectId(productId);
-
-  cart.items = cart.items.filter(item => {
-    // Handle populated productId (object) or raw ObjectId
-    const currentId = item.productId instanceof Types.ObjectId
-      ? item.productId
-      : (item.productId as any)._id;
-
-    return !currentId.equals(productObjectId);
-  });
-
-  if (cart.items.length === initialItemCount) {
-    throw new NotFoundException(`Product with ID "${productId}" not found in cart.`);
-  }
-
-  try {
-    return await cart.save();
-  } catch (error) {
-    throw new InternalServerErrorException('Failed to remove item from cart.');
-  }
-}
 
 
   async clearCart(userId: string): Promise<CartDocument> {
     const cart = await this.getOrCreateCart(userId);
     cart.items = [];
-    cart.totalPrice = 0; 
+    cart.totalPrice = 0;
     try {
-          console.log('clicked')
+      console.log('clicked')
 
       return await cart.save();
     } catch (error) {
@@ -180,6 +183,18 @@ export class CartService {
     if (!deletedCart) {
       throw new NotFoundException(`Cart for user ID "${userId}" not found.`);
     }
+    console.log('user', userId)
     return deletedCart;
   }
+
+  // async getOrCreateCart(userId: string): Promise<CartDocument> {
+  //   let cart = await this.cartModel.findOne({ userId });
+
+  //   if (!cart) {
+  //     cart = await this.cartModel.create({ userId, items: [] });
+  //   }
+
+  //   return cart;
+  // }
+
 }

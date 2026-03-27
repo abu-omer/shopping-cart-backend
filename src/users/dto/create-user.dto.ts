@@ -1,33 +1,32 @@
 import { IsString, IsEmail, MinLength, MaxLength, IsEnum, IsOptional, ValidateNested, IsPostalCode, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PartialType } from "@nestjs/mapped-types";
+
 import { Type } from 'class-transformer';
 
 
 
 
-export class AddressDto {
+export class CreateAddressDto {
   @IsString()
-  @IsNotEmpty()
-  street: string;
+  street?: string;
 
   @IsString()
-  @IsNotEmpty()
-  city: string;
+  city?: string;
 
   @IsString()
-  @IsNotEmpty()
-  state: string;
+  state?: string;
 
   @IsString()
-  @IsNotEmpty()
   @IsPostalCode('any')
-  zipCode: string;
+  zipCode?: string;
 
   @IsOptional()
   @IsString()
-  country: string;
+  country?: string;
 }
 
+export class UpdateAddressDto extends PartialType(CreateAddressDto) { }
 
 export class CreateUserDto {
   @IsEmail()
@@ -40,12 +39,10 @@ export class CreateUserDto {
   password: string;
 
   @IsString()
-  @IsNotEmpty()
   @MaxLength(50)
-  firstName: string;
+  firstName?: string;
 
   @IsString()
-  @IsNotEmpty()
   @MaxLength(50)
-  lastName: string;
+  lastName?: string;
 }

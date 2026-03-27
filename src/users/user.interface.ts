@@ -19,3 +19,11 @@
 //   readonly createdAt?: Date;
 //   readonly updatedAt?: Date;
 // }
+
+// export interface Address {
+//     street: string;
+//     city: string;
+//     state: string;
+//     zipCode: string;
+//     country: string;
+// }

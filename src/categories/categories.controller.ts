@@ -1,14 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) { }
 
   @Post()
-  create(@Body() createCategoryDto: CreateCategoryDto) {
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/categories',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          callback(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    },
+    ),
+  )
+  create(@UploadedFile() file: Express.Multer.File, @Body() createCategoryDto: CreateCategoryDto) {
+    if (file) {
+      createCategoryDto.image = file.filename
+    }
     return this.categoriesService.create(createCategoryDto);
   }
 
@@ -30,7 +49,25 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/categories',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          callback(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    },
+    ),
+  )
+  update(@Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto,
+    @UploadedFile() file: Express.Multer.File,) {
+    if (file) {
+      updateCategoryDto.image = file.filename;
+    }
     return this.categoriesService.update(id, updateCategoryDto);
   }
 
@@ -39,3 +76,7 @@ export class CategoriesController {
     return this.categoriesService.remove(id);
   }
 }
+function FileFieldInterceptor(arg0: { name: string; maxCount: number; }[], arg1: { storage: any; }): Function | import("@nestjs/common").NestInterceptor<any, any> {
+  throw new Error('Function not implemented.');
+}
+

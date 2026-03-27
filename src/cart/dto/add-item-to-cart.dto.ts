@@ -1,6 +1,7 @@
 
 import { IsMongoId, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class AddItemToCartDto {
   @ApiProperty({
@@ -14,9 +15,10 @@ export class AddItemToCartDto {
     description: 'The quantity of the product to add/update in the cart',
     example: 1,
     minimum: 1,
-    
+
   })
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
-  quantity: number ;
+  quantity: number;
 }

@@ -7,11 +7,14 @@ import { UsersModule } from 'src/users/users.module';
 import { ProductsModule } from 'src/products/products.module';
 
 @Module({
-  imports:[MongooseModule.forFeature([{ name: Cart.name, schema: CartSchema }]),ProductsModule, 
-  forwardRef(() => UsersModule),
-],
+  imports: [
+    MongooseModule.forFeature([{ name: Cart.name, schema: CartSchema }]),
+    forwardRef(() => ProductsModule),
+    forwardRef(() => UsersModule),
+
+  ],
   controllers: [CartController],
   providers: [CartService],
-  exports:[CartService]
+  exports: [CartService]
 })
-export class CartModule {}
+export class CartModule { }

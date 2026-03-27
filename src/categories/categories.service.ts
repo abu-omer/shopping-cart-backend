@@ -4,6 +4,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Category, CategoryDocument } from './entities/category.entity';
 import { Model, Types } from 'mongoose';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class CategoriesService {
@@ -13,6 +14,7 @@ export class CategoriesService {
   ) { }
   async create(createCategoryDto: CreateCategoryDto) {
     const { name, isActive } = createCategoryDto
+
     const CategoryExist = await this.categoryModel.findOne({ name })
     if (CategoryExist) {
       throw new BadRequestException('category already exist')
@@ -54,4 +56,26 @@ export class CategoriesService {
   async findCategoryById(id: string) {
     return this.categoryModel.findByIdAndUpdate(id)
   }
+
+  async findById(
+    id: string,
+    populateProducts: boolean = false,
+    populateHierarchy: boolean = false,
+  ): Promise<CategoryDocument> {
+    const query = this.categoryModel.findById(id);
+
+    if (populateProducts) {
+      query.populate('products');
+    }
+    if (populateHierarchy) {
+      query.populate('parentCategory').populate('subCategories');
+    }
+
+    const category = await query.exec();
+    if (!category) {
+      throw new NotFoundException(`Category with ID "${id}" not found.`);
+    }
+    return category;
+  }
+
 }
