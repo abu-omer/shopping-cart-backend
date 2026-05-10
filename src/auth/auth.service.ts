@@ -1,15 +1,16 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { LoginDto } from './dto/Login.dto';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt'
-import { AdminsService } from 'src/admins/admins.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
+import { AdminsService } from 'src/admins/admins.service';
 import { UserDocument } from 'src/users/entities/user.entity';
+import { UsersService } from 'src/users/users.service';
+import { LoginDto } from './dto/Login.dto';
 import { CreateUserDto } from './dto/Signup.dto';
+import { User } from './entities/user.entity';
+import { CreateAdminDto } from 'src/admins/dto/create-admin.dto';
 // import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
@@ -63,9 +64,13 @@ export class AuthService {
 
 
   async AdminLogin(loginDto: LoginDto) {
+    if (!loginDto) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const { email, password } = loginDto
 
-    const admin = await this.adminsService.findByAdminname(email)
+    const admin = await this.adminsService.findByEmail(email)
+    console.log('admin', admin)
     if (!admin) {
       throw new NotFoundException('Invalid credentials')
     }
@@ -75,9 +80,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials')
     }
 
-    const payload = { sub: admin._id, email: admin.email }
-
-    return { access_token: this.jwtService.sign(payload), user: { id: admin._id, email: admin.email, username: admin.username } }
+    const payload = { sub: admin._id, userId: admin._id, email: admin.email, role: admin.role };
+    const accessToken = this.jwtService.sign(payload);
+    const user = { id: admin._id, email: admin.email, username: admin.username, role: admin.role }
+    console.log('user', user)
+    console.log('accessToken', accessToken)
+    return { accessToken, user }
 
   }
   async signUp(createUserDto: CreateUserDto) {
@@ -88,15 +96,21 @@ export class AuthService {
     }
 
     try {
-
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+      console.log('hashed', hashedPassword)
+
+      // Auto-generate required fields for DummyJSON compatibility
+      const username = createUserDto.email.split('@')[0];
+      const id = Math.floor(Math.random() * 1000000); // Random numeric ID
+
+      // Extract only the fields we need, ignoring things like confirmPassword
+      const { email, password } = createUserDto;
 
       const newUser = new this.userModel({
-        ...createUserDto,
+        email,
         password: hashedPassword,
+        username,
       });
-
-
 
       const savedUser = await newUser.save();
       return savedUser;
@@ -112,6 +126,9 @@ export class AuthService {
   async login(
     loginDto: LoginDto,
   ): Promise<{ accessToken: string; user: Partial<User> }> {
+    if (!loginDto || !loginDto.email || !loginDto.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const { email, password } = loginDto;
 
     const user = await this.usersService.findByemail(email)
@@ -121,19 +138,21 @@ export class AuthService {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
+    console.log('isPasswordValid', isPasswordValid)
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials!!');
     }
 
     const payload = {
       userId: user._id,
+      sub: user._id,
       email: user.email,
+      role: user.role,
     };
 
     const accessToken = this.jwtService.sign(payload);
-
     // const { password: _, ...result } = user;
+    console.log('accessToken', accessToken)
     return { accessToken, user };
   }
 

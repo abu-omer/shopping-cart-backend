@@ -50,7 +50,7 @@ export class SubCategoriesService {
     return await this.subCategoryModel.findById({ _id: id })
   }
 
-  async update(id: number, updateSubCategoryDto: UpdateSubCategoryDto) {
+  async update(id: string, updateSubCategoryDto: UpdateSubCategoryDto) {
     return await this.subCategoryModel.findByIdAndUpdate({ _id: id }, updateSubCategoryDto, { new: true })
   }
 

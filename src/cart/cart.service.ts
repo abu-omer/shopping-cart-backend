@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { Cart, CartDocument, CartItem } from './entities/cart.entity';
+import { Cart, CartDocument, CartProduct } from './entities/cart.entity';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { ProductsService } from '../products/products.service';
 
@@ -20,19 +20,26 @@ export class CartService {
 
   async getOrCreateCart(userId: string): Promise<CartDocument> {
     let cart = await this.cartModel
-      .findOne({ userId: new Types.ObjectId(userId) })
-      // .populate({
-      //   path: 'items.productId',
-      //   model: 'Product', // Ensure this matches the 'ref' in CartItemSchema
-      // })
+      .findOne({ userObjectId: new Types.ObjectId(userId) })
       .exec();
 
-
     if (!cart) {
+      // Find the highest ID to increment
+      const lastCart = await this.cartModel.findOne().sort({ id: -1 }).exec();
+      const nextId = lastCart && lastCart.id ? lastCart.id + 1 : 1;
+
+      // For numeric userId, we check if it exists on the user. 
+      // If not, we could use a default or increment. 
+      // Assuming for now it's mapping to an external system where userId 1 exists.
       cart = new this.cartModel({
-        userId: new Types.ObjectId(userId),
-        items: [],
-        totalPrice: 0,
+        id: nextId,
+        userObjectId: new Types.ObjectId(userId),
+        userId: 1, // Default or map from user
+        products: [],
+        total: 0,
+        discountedTotal: 0,
+        totalProducts: 0,
+        totalQuantity: 0,
       });
       await cart.save();
     }
@@ -43,7 +50,7 @@ export class CartService {
 
   async addItem(userId: string, addItemDto: AddItemToCartDto): Promise<CartDocument> {
     const { productId, quantity } = addItemDto;
-    console.log('item', addItemDto)
+    console.log("userId", userId, "productId", productId, "quantity", quantity)
     const product = await this.productsService.findById(productId);
     if (!product) {
       throw new NotFoundException(`Product with ID "${productId}" not found.`);
@@ -51,34 +58,45 @@ export class CartService {
 
     const cart = await this.getOrCreateCart(userId);
 
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId,
+    const existingProductIndex = cart.products.findIndex(
+      (p) => p.productId.toString() === productId,
     );
 
-    let newQuantityInCart = quantity;
+    if (existingProductIndex > -1) {
+      const existingProduct = cart.products[existingProductIndex];
+      const newQuantity = existingProduct.quantity + quantity;
 
-    if (existingItemIndex > -1) {
-      newQuantityInCart = cart.items[existingItemIndex].quantity + quantity;
-      if (newQuantityInCart > product.stock) {
+      if (newQuantity > product.stock) {
         throw new BadRequestException(
-          `Cannot add ${quantity} units. Only ${product.stock - cart.items[existingItemIndex].quantity} more units of "${product.name}" available.`,
+          `Cannot add ${quantity} units. Only ${product.stock - existingProduct.quantity} more units of "${product.title}" available.`,
         );
       }
-      cart.items[existingItemIndex].quantity = newQuantityInCart;
+
+      existingProduct.quantity = newQuantity;
+      existingProduct.total = Number((existingProduct.quantity * existingProduct.price).toFixed(2));
+      existingProduct.discountedTotal = Number((existingProduct.total * (1 - (existingProduct.discountPercentage || 0) / 100)).toFixed(2));
     } else {
       if (quantity > product.stock) {
         throw new BadRequestException(
-          `Cannot add ${quantity} units. Only ${product.stock} units of "${product.name}" available.`,
+          `Cannot add ${quantity} units. Only ${product.stock} units of "${product.title}" available.`,
         );
       }
-      const newCartItem: CartItem = {
-        productId: new Types.ObjectId(productId),
-        productName: product.name,
+
+      const total = Number((quantity * product.price).toFixed(2));
+      const discountPercentage = product.discountPercentage || 0;
+      const discountedTotal = Number((total * (1 - discountPercentage / 100)).toFixed(2));
+
+      const newCartProduct: CartProduct = {
+        productId: product._id,
+        title: product.title,
         quantity,
         price: product.price,
-        imageFiles: product.imageFiles,
+        total,
+        discountPercentage,
+        discountedTotal,
+        thumbnail: product.thumbnail || (product.images && product.images[0]) || '',
       };
-      cart.items.push(newCartItem);
+      cart.products.push(newCartProduct);
     }
 
     try {
@@ -88,7 +106,6 @@ export class CartService {
     }
   }
 
-
   async updateItemQuantity(
     userId: string,
     productId: string,
@@ -96,17 +113,16 @@ export class CartService {
   ): Promise<CartDocument> {
     const cart = await this.getOrCreateCart(userId);
 
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId,
+    const existingProductIndex = cart.products.findIndex(
+      (p) => p.productId.toString() === productId,
     );
-    console.log('id', productId)
-    console.log('quantity', quantity)
-    if (existingItemIndex === -1) {
+
+    if (existingProductIndex === -1) {
       throw new NotFoundException(`Product with ID "${productId}" not found in cart.`);
     }
 
     if (quantity === 0) {
-      cart.items.splice(existingItemIndex, 1);
+      cart.products.splice(existingProductIndex, 1);
     } else {
       const product = await this.productsService.findById(productId);
       if (!product) {
@@ -115,10 +131,14 @@ export class CartService {
 
       if (quantity > product.stock) {
         throw new BadRequestException(
-          `Cannot update quantity to ${quantity}. Only ${product.stock} units of "${product.name}" available.`,
+          `Cannot update quantity to ${quantity}. Only ${product.stock} units of "${product.title}" available.`,
         );
       }
-      cart.items[existingItemIndex].quantity = quantity;
+
+      const existingProduct = cart.products[existingProductIndex];
+      existingProduct.quantity = quantity;
+      existingProduct.total = Number((existingProduct.quantity * existingProduct.price).toFixed(2));
+      existingProduct.discountedTotal = Number((existingProduct.total * (1 - (existingProduct.discountPercentage || 0) / 100)).toFixed(2));
     }
 
     try {
@@ -128,49 +148,43 @@ export class CartService {
     }
   }
 
-
   async removeItem(userId: string, productId: string): Promise<CartDocument> {
     const cart = await this.getOrCreateCart(userId);
-    const initialItemCount = cart.items.length;
-    console.log('id', productId)
+    const initialItemCount = cart.products.length;
+
     if (!Types.ObjectId.isValid(productId)) {
       throw new BadRequestException(`Invalid product ID: "${productId}"`);
     }
 
     const productObjectId = new Types.ObjectId(productId);
-    console.log('pro', productId)
 
-    cart.items = cart.items.filter(item => {
-      // Handle populated productId (object) or raw ObjectId
-      const currentId = item.productId instanceof Types.ObjectId
-        ? item.productId
-        : (item.productId as any)._id;
+    cart.products = cart.products.filter(product => {
+      const currentId = product.productId instanceof Types.ObjectId
+        ? product.productId
+        : (product.productId as any)._id;
 
       return !currentId.equals(productObjectId);
     });
 
-
-    if (cart.items.length === initialItemCount) {
+    if (cart.products.length === initialItemCount) {
       throw new NotFoundException(`Product with ID "${productId}" not found in cart.`);
     }
 
     try {
-      console.log('cart', cart)
-
       return await cart.save();
     } catch (error) {
       throw new InternalServerErrorException('Failed to remove item from cart.');
     }
   }
 
-
   async clearCart(userId: string): Promise<CartDocument> {
     const cart = await this.getOrCreateCart(userId);
-    cart.items = [];
-    cart.totalPrice = 0;
+    cart.products = [];
+    cart.total = 0;
+    cart.discountedTotal = 0;
+    cart.totalProducts = 0;
+    cart.totalQuantity = 0;
     try {
-      console.log('clicked')
-
       return await cart.save();
     } catch (error) {
       throw new InternalServerErrorException('Failed to clear cart.');
@@ -179,7 +193,7 @@ export class CartService {
 
 
   async deleteCartByUserId(userId: string): Promise<CartDocument> {
-    const deletedCart = await this.cartModel.findOneAndDelete({ userId: new Types.ObjectId(userId) }).exec();
+    const deletedCart = await this.cartModel.findOneAndDelete({ userObjectId: new Types.ObjectId(userId) }).exec();
     if (!deletedCart) {
       throw new NotFoundException(`Cart for user ID "${userId}" not found.`);
     }

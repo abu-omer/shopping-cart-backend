@@ -34,13 +34,34 @@ export class UsersService {
     }
   }
 
-  async findAll(page: number = 1, limit: number = 10): Promise<User[]> {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    search: string = '',
+  ): Promise<{ data: User[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
+    const filter: any = {};
 
-    return this.userModel.find()
-      .skip(skip)
-      .limit(limit)
-      .exec();
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.userModel.find(filter).skip(skip).limit(limit).exec(),
+      this.userModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   async findById(id: string): Promise<UserDocument> {
@@ -81,11 +102,13 @@ export class UsersService {
     // Merge nested shippingAddress if it exists
     if (updateUserDto.shippingAddresses) {
       user.shippingAddresses = updateUserDto.shippingAddresses.map(addr => ({
-        street: addr.street ?? '',
+        address: addr.address ?? '',
         city: addr.city ?? '',
         state: addr.state ?? '',
-        zipCode: addr.zipCode ?? '',
-        country: addr.country ?? 'Sudan',
+        stateCode: addr.stateCode ?? '',
+        postalCode: addr.postalCode ?? '',
+        coordinates: addr.coordinates ?? { lat: 0, lng: 0 },
+        country: addr.country ?? 'United States',
       }));
     }
 
@@ -118,8 +141,23 @@ export class UsersService {
   ) {
     return this.userModel.findByIdAndUpdate(
       id,
-      { shippingAddress },
+      { $addToSet: { shippingAddresses: shippingAddress } },
       { new: true }
+    );
+  }
+
+
+  async updatemany() {
+    try {
+      await this.userModel.collection.dropIndex('id_1');
+    } catch (e) {
+      console.log('Index drop ignored (might not exist):', e.message);
+    }
+
+    await this.userModel.updateMany(
+      {},
+      { $unset: { id: "" } },
+      { strict: false },
     );
   }
 }

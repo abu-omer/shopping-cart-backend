@@ -4,31 +4,6 @@ import { Type } from 'class-transformer';
 
 
 
-
-// export class AddressDto {
-//   @IsString()
-//   @IsNotEmpty()
-//   street: string;
-
-//   @IsString()
-//   @IsNotEmpty()
-//   city: string;
-
-//   @IsString()
-//   @IsNotEmpty()
-//   state: string;
-
-//   @IsString()
-//   @IsNotEmpty()
-//   @IsPostalCode('any')
-//   zipCode: string;
-
-//   @IsOptional()
-//   @IsString()
-//   country: string;
-// }
-
-
 export class CreateUserDto {
 
 
@@ -38,13 +13,12 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(8)
+  @MinLength(6)
   password: string;
 
 
   @IsString()
-  @IsNotEmpty()
-  @MinLength(8)
+  @MinLength(6)
   confirmPassword: string;
 
 

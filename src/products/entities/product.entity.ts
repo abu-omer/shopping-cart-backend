@@ -1,54 +1,3 @@
-// import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-// import { Document, Types } from 'mongoose';
-// import { Category } from "src/categories/entities/category.entity";
-// import { SubCategory } from "src/sub-categories/entities/sub-category.entity";
-// export enum ProductType {
-//   AVAILABLE = "available",
-//   BEST_SELLING = "best_selling",
-//   UPCOMING = "upcoming",
-// } export type ProductDocument = Product & Document
-// @Schema()
-// export class Product {
-//   _id: Types.ObjectId;
-
-//   @Prop({ required: true })
-//   name: string
-//   @Prop({ required: true })
-//   description: string
-//   @Prop({ required: true })
-//   price: number
-
-//   @Prop()
-//   review: string
-//   @Prop()
-//   color: string;
-
-//   @Prop()
-//   size: string;
-//   @Prop({
-//     type: String,
-//     enum: ProductType,
-//     default: ProductType.AVAILABLE,
-//   })
-//   productType: ProductType;
-
-//   @Prop({ default: 0 })
-//   stock: number;
-//   @Prop([String])
-//   imageFiles?: string[];
-
-//   @Prop({ default: 0 })
-//   ratings: number;
-
-//   @Prop({ type: Types.ObjectId, ref: Category.name, required: true })
-//   categoriesId: Types.ObjectId;
-
-//   @Prop({ type: Types.ObjectId, ref: SubCategory.name, required: true })
-//   subCategoriesId: Types.ObjectId;
-// }
-
-// export const ProductSchema = SchemaFactory.createForClass(Product)
-
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
@@ -57,28 +6,100 @@ import { Review } from 'src/reviews/entities/review.entity';
 
 export type ProductDocument = Product & Document;
 
+@Schema({ _id: false })
+class Dimensions {
+  @Prop({ type: Number })
+  width: number;
+
+  @Prop({ type: Number })
+  height: number;
+
+  @Prop({ type: Number })
+  depth: number;
+}
+
+@Schema({ _id: false })
+class Meta {
+  @Prop({ type: Date })
+  createdAt: Date;
+
+  @Prop({ type: Date })
+  updatedAt: Date;
+
+  @Prop({ type: String })
+  barcode: string;
+
+  @Prop({ type: String })
+  qrCode: string;
+}
+
 @Schema({ timestamps: true })
 export class Product {
-  _id?: Types.ObjectId;
+  _id: Types.ObjectId;
+
+
+
   createdAt?: Date;
   updatedAt?: Date;
 
-  @Prop({ required: true, unique: true, trim: true, index: true }) // index: true for name
-  name: string;
+  @Prop({ required: true, unique: true, trim: true, index: true })
+  title: string;
 
   @Prop({ required: true, type: Number, min: 0 })
   price: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  discountPercentage?: number;
+
+  @Prop({ type: Number, min: 0, max: 5, default: 0 })
+  rating?: number;
 
   @Prop({ required: true, type: Number, min: 0, default: 0 })
   stock: number;
 
   @Prop([String])
-  imageFiles: string[];
+  tags: string[];
+
+  @Prop({ type: String, trim: true })
+  brand?: string;
+
+  @Prop({ type: String, trim: true })
+  sku?: string;
+
+  @Prop({ type: Number })
+  weight?: number;
+
+  @Prop({ type: Dimensions })
+  dimensions?: Dimensions;
+
+  @Prop({ type: String })
+  warrantyInformation?: string;
+
+  @Prop({ type: String })
+  shippingInformation?: string;
+
+  @Prop({ type: String })
+  availabilityStatus?: string;
+
+  @Prop({ type: String })
+  returnPolicy?: string;
+
+  @Prop({ type: Number })
+  minimumOrderQuantity?: number;
+
+  @Prop({ type: Meta })
+  meta?: Meta;
+
+  @Prop([String])
+  images: string[];
+
+  @Prop({ type: String })
+  thumbnail?: string;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Category' }] })
   categories: Types.ObjectId[] | Category[];
 
-  @Prop({ type: String, enum: ['available', 'out_of_stock', 'discontinued'], default: 'available', index: true }) // index: true for status
+  @Prop({ type: String, enum: ['available', 'out_of_stock', 'discontinued'], default: 'available', index: true })
   status: string;
 
   @Prop({ type: String, trim: true })

@@ -15,10 +15,12 @@ export class AuthController {
   // }
 
 
+
   @Post('admin/login')
   @ApiResponse({ status: 200, description: 'User successfully logged in.', type: 'login completed' })
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   async AdminLogin(@Body() loginDto: LoginDto) {
+
     return this.authService.AdminLogin(loginDto);
   }
 

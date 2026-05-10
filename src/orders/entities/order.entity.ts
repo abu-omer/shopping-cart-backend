@@ -1,48 +1,8 @@
-// import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-// import { Document, Types } from 'mongoose';
-
-// @Schema()
-// export class OrderItem {
-//     @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
-//     productId: Types.ObjectId;
-
-//     @Prop({ required: true })
-//     productName: string;
-
-//     @Prop({ required: true, min: 1 })
-//     quantity: number;
-
-//     @Prop({ required: true, min: 0 })
-//     price: number;
-
-//     @Prop({ type: [String] })
-//     images?: string[];
-// }
-
-// export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
-
-// @Schema({ timestamps: true })
-// export class Order {
-//     @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-//     userId: Types.ObjectId;
-
-//     @Prop({ type: [OrderItemSchema], default: [] })
-//     items: OrderItem[];
-
-//     @Prop({ required: true, min: 0 })
-//     totalPrice: number;
-
-//     @Prop({ default: 'pending' })
-//     status: string;
-// }
-
-// export type OrderDocument = Document & Order;
-// export const OrderSchema = SchemaFactory.createForClass(Order);
 
 
 // --- src/orders/schemas/order.schema.ts ---
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import mongoose, { Document, Types } from 'mongoose';
 import { Address, User } from 'src/users/entities/user.entity';
 import { Product } from 'src/products/entities/product.entity';
 
@@ -53,7 +13,7 @@ export class OrderItem {
     productId: Types.ObjectId | Product;
 
     @Prop({ required: true, trim: true })
-    productName: string;
+    productTitle: string;
 
     @Prop({ required: true, type: Number, min: 0 })
     quantity: number;
@@ -62,7 +22,7 @@ export class OrderItem {
     price: number;
 
     @Prop({ type: [String] })
-    imageFiles?: string[];
+    images?: string[];
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
@@ -77,8 +37,10 @@ export class Order {
     createdAt?: Date; // Mongoose adds this with timestamps: true
     updatedAt?: Date; // Mongoose adds this with timestamps: true
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true }) // Kept index: true
-    userId: Types.ObjectId
+    // @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true }) // Kept index: true
+    // userId: Types.ObjectId
+    @Prop({ type: Types.ObjectId, ref: 'User' })
+    userId: User;
 
     @Prop({
         type: String,
@@ -108,6 +70,7 @@ export class Order {
 
     @Prop()
     transactionId?: string;
+
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

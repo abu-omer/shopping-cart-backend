@@ -1,240 +1,4 @@
-// import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-// import { CreateProductDto } from './dto/create-product.dto';
-// import { UpdateProductDto } from './dto/update-product.dto';
-// import { InjectModel } from '@nestjs/mongoose';
-// import { Product, ProductDocument } from './entities/product.entity';
-// import { Model, Types, ObjectId } from 'mongoose';
-// import { CategoriesService } from 'src/categories/categories.service';
-// import { SubCategoriesService } from 'src/sub-categories/sub-categories.service';
-// import { Category, CategoryDocument } from 'src/categories/entities/category.entity';
-// import { SubCategory, SubCategoryDocument } from 'src/sub-categories/entities/sub-category.entity';
-// import { Order, OrderDocument } from 'src/orders/entities/order.entity';
-// import { CartService } from 'src/cart/cart.service';
 
-// @Injectable()
-// export class ProductsService {
-//   constructor(@InjectModel(Product.name) private productModel: Model<ProductDocument>,
-//     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
-//     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
-//     @InjectModel(SubCategory.name) private subCategoryModel: Model<SubCategoryDocument>,
-//     @Inject(forwardRef(() => CartService)) private cartService: CartService,
-//     private readonly categoryService: CategoriesService,
-//     private readonly subCategoryService: SubCategoriesService,
-
-//   ) { }
-
-//   async createOrderFromCart(userId: string): Promise<OrderDocument> {
-//     const cart = await this.cartService.getOrCreateCart(userId);
-
-//     if (!cart.items.length) {
-//       throw new BadRequestException('Cart is empty');
-//     }
-
-//     // Create order
-//     const order = new this.orderModel({
-//       userId,
-//       items: cart.items.map(item => ({
-//         productId: item.productId,
-//         productName: item.productName,
-//         quantity: item.quantity,
-//         price: item.price,
-//         imageFiles: item.imageFiles,
-//       })),
-//       totalPrice: cart.totalPrice,
-//     });
-
-//     await order.save();
-
-//     // OPTIONAL: reduce product stock
-//     for (const item of cart.items) {
-//       await this.decreaseStock(
-//         item.productId.toString(),
-//         item.quantity,
-//       );
-//     }
-
-//     // Clear cart after successful order
-//     cart.items = [];
-//     cart.totalPrice = 0;
-//     await cart.save();
-
-//     return order;
-//   }
-
-//   async create(createProductDto: CreateProductDto) {
-//     const { categoriesId, subCategoriesId, ...rest } = createProductDto;
-
-//     const category = await this.categoryModel.findById(categoriesId);
-//     if (!category) throw new NotFoundException('Category not found');
-
-//     let subCategory: any = null;
-//     if (subCategoriesId) {
-//       subCategory = await this.subCategoryModel.findById(subCategoriesId);
-//       if (!subCategory) throw new NotFoundException('SubCategory not found');
-//     }
-
-//     const product = await this.productModel.create({
-//       ...rest,
-//       categoriesId,
-//       subCategoriesId,
-//     });
-
-//     await this.categoryModel.findByIdAndUpdate(categoriesId.toString(), {
-//       $push: { productsId: product._id },
-//     });
-//     console.log('categoriesId', categoriesId)
-//     console.log('subCategoriesId', subCategoriesId)
-
-//     if (subCategoriesId) {
-//       await this.subCategoryModel.findByIdAndUpdate(subCategoriesId.toString(), {
-//         $push: { productsId: product._id },
-//       });
-//     }
-
-//     return product;
-//   }
-
-
-//   async findAll() {
-//     const products = await this.productModel
-//       .find()
-//       .populate('categoriesId', 'name')
-//       .populate('subCategoriesId', 'name')
-//       .exec();
-//     return products;
-//   }
-//   async getProductByCat(id: string) {
-
-//     const products = await this.productModel.find({
-//       categoriesId: id
-//     }).exec();
-
-//     return products;
-//   }
-//   async searchProduct(query: string) {
-//     console.log('query', query)
-//     return await this.productModel.find({
-//       name: { $regex: query, $options: "i" }
-//     });
-//   }
-//   async findOne(id: string) {
-//     return await this.productModel.findById(id)
-//   }
-//   async getProductsBySub(id: string) {
-
-//     const products = await this.productModel.find({
-//       subCategoriesId: id
-//     }).exec();
-
-//     return products;
-//   }
-
-
-
-
-//   async update(id: string, updateProductDto: UpdateProductDto & { removeImages?: string[] }): Promise<ProductDocument> {
-//     console.log('update', updateProductDto)
-//     const product = await this.productModel.findById(id).exec();
-//     if (!product) {
-//       throw new NotFoundException(`Product with ID "${id}" not found.`);
-//     }
-
-//     if (updateProductDto.name && updateProductDto.name !== product.name) {
-//       console.log('name', updateProductDto.name)
-//       const existingProduct = await this.productModel.findOne({ name: updateProductDto.name }).exec();
-//       if (existingProduct && existingProduct._id.toString() !== id) {
-//         throw new ConflictException('Product with this name already exists.');
-//       }
-//     }
-
-
-//     if (updateProductDto.imageFiles?.length) {
-//       product.imageFiles?.push(...updateProductDto.imageFiles);
-//     }
-
-//     if (updateProductDto.removeImages?.length) {
-//       product.imageFiles = product.imageFiles?.filter(img => !updateProductDto.removeImages!.includes(img));
-//     }
-
-//     // --- CATEGORY ---
-//     if (updateProductDto.categoriesId) {
-//       const newCategoryId = updateProductDto.categoriesId.toString();
-//       console.log('newCategoryId', newCategoryId)
-//       console.log('product.categoriesId', product.categoriesId)
-//       if (!product.categoriesId || product.categoriesId.toString() !== newCategoryId) {
-
-//         // Remove from old category
-//         if (product.categoriesId) {
-//           await this.categoryModel.findByIdAndUpdate(product.categoriesId.toString(), {
-//             $pull: { productsId: product._id },
-//           });
-//         }
-
-//         // Add to new category
-//         await this.categoryModel.findByIdAndUpdate(newCategoryId, {
-//           $addToSet: { productsId: product._id },
-//         });
-
-//         product.categoriesId = new Types.ObjectId(newCategoryId);
-//       }
-//     }
-
-//     // --- SUBCATEGORY ---
-//     if (updateProductDto.subCategoriesId) {
-//       const newSubCategoryId = updateProductDto.subCategoriesId.toString();
-//       console.log('newSubCategoryId', newSubCategoryId)
-//       console.log('product.subCategoriesId', product.subCategoriesId)
-
-//       if (!product.subCategoriesId || product.subCategoriesId.toString() !== newSubCategoryId) {
-//         // Remove from old subcategory
-//         if (product.subCategoriesId) {
-//           await this.subCategoryModel.findByIdAndUpdate(
-//             product.subCategoriesId.toString(),
-//             { $pull: { productsId: product._id } }
-//           );
-//         }
-
-//         // Add to new subcategory
-//         await this.subCategoryModel.findByIdAndUpdate(newSubCategoryId, {
-//           $addToSet: { productsId: product._id },
-//         });
-
-//         product.subCategoriesId = new Types.ObjectId(newSubCategoryId);
-//       }
-//     }
-
-
-
-
-//     const { imageFiles, removeImages, categoriesId, subCategoriesId, ...rest } = updateProductDto;
-//     Object.assign(product, rest);
-//     console.log('pro', product)
-//     try {
-//       return await product.save();
-//     } catch (error) {
-//       throw new InternalServerErrorException('Failed to update product.');
-//     }
-//   }
-
-//   async remove(id: string) {
-//     return await this.productModel.findOneAndDelete({ _id: id })
-//   }
-
-//   async findById(id: string) {
-//     return await this.productModel.findById(id)
-//   }
-//   async decreaseStock(productId: string, quantity: number) {
-//     const product = await this.productModel.findById(productId);
-
-//     if (!product || product.stock < quantity) {
-//       throw new BadRequestException('Insufficient stock');
-//     }
-
-//     product.stock -= quantity;
-//     await product.save();
-//   }
-
-// }
 
 
 import {
@@ -273,9 +37,9 @@ export class ProductsService {
       }
     }
 
-    const existingProduct = await this.productModel.findOne({ name: createProductDto.name }).exec();
+    const existingProduct = await this.productModel.findOne({ title: createProductDto.title }).exec();
     if (existingProduct) {
-      throw new ConflictException('Product with this name already exists.');
+      throw new ConflictException('Product with this title already exists.');
     }
 
     if (createProductDto.categories?.length) {
@@ -287,18 +51,18 @@ export class ProductsService {
       }
     }
 
-    const imageFiles: string[] = [];
+    const images: string[] = createProductDto.images || [];
     if (files && files.length > 0) {
       for (const file of files) {
         const imageFile = `http://localhost:3000/uploads/${file.filename}`;
-        imageFiles.push(imageFile);
+        images.push(imageFile);
       }
     }
 
     // Create and save product
     const newProduct = new this.productModel({
       ...createProductDto,
-      imageFiles,
+      images,
       categories: createProductDto.categories?.map(id => new Types.ObjectId(id)) || [],
     });
 
@@ -319,9 +83,11 @@ export class ProductsService {
     populateCategories: boolean = false,
     category?: string,
 
-  ): Promise<ProductDocument[]> {
+  ): Promise<{ data: ProductDocument[]; total: number; page: number; limit: number }> {
+    const safePage = Number(page) > 0 ? Number(page) : 1;
+    const safeLimit = Number(limit) > 0 ? Number(limit) : 10;
+
     const filter: any = {};
-    console.log('cat', category)
     if (category) {
       try {
         const categoryIds = Array.isArray(category)
@@ -334,19 +100,31 @@ export class ProductsService {
         filter.categories = category;
       }
     }
+
     const query = this.productModel.find(filter)
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit)
       .sort({ createdAt: -1 });
 
     if (populateReviews) {
       query.populate('reviews');
     }
     if (populateCategories) {
-      query.populate('categories');
+      query.populate('categories'); // Populate single category
     }
 
-    return query.exec();
+    const [data, total] = await Promise.all([
+      this.productModel.find(filter)
+        .skip((safePage - 1) * safeLimit)
+        .limit(safeLimit)
+        .sort({ createdAt: -1 })
+        .populate(populateReviews ? 'reviews' : '')
+        .populate(populateCategories ? 'categories' : '')
+        .exec(),
+      this.productModel.countDocuments(filter).exec()
+    ]);
+
+    return { data, total, page: safePage, limit: safeLimit };
   }
 
 
@@ -356,7 +134,9 @@ export class ProductsService {
     populateReviews: boolean = false,
     populateCategories: boolean = false,
   ): Promise<ProductDocument> {
-    const query = this.productModel.findById(id);
+    const isValidObjectId = Types.ObjectId.isValid(id) && (String(new Types.ObjectId(id)) === id);
+    const filter = isValidObjectId ? { _id: id } : { id: Number(id) };
+    const query = this.productModel.findOne(filter);
 
     if (populateReviews) {
       query.populate('reviews');
@@ -378,10 +158,10 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
 
-    if (updateProductDto.name && updateProductDto.name !== product.name) {
-      const existingProductWithName = await this.productModel.findOne({ name: updateProductDto.name }).exec();
-      if (existingProductWithName && existingProductWithName._id!.toString() !== id) {
-        throw new ConflictException('Product with this name already exists.');
+    if (updateProductDto.title && updateProductDto.title !== product.title) {
+      const existingProductWithTitle = await this.productModel.findOne({ title: updateProductDto.title }).exec();
+      if (existingProductWithTitle && existingProductWithTitle._id!.toString() !== id) {
+        throw new ConflictException('Product with this title already exists.');
       }
     }
 
@@ -405,8 +185,8 @@ export class ProductsService {
     }
 
     // Update image URLs if provided
-    if (updateProductDto.imageFiles !== undefined) {
-      product.imageFiles = updateProductDto.imageFiles;
+    if (updateProductDto.images !== undefined) {
+      product.images = updateProductDto.images;
     }
 
     Object.assign(product, updateProductDto);
@@ -454,5 +234,19 @@ export class ProductsService {
     }
     product.stock += quantity;
     return product.save();
+  }
+
+
+  async updatemany() {
+    try {
+      await this.productModel.collection.dropIndex('id_1');
+    } catch (e) {
+      console.log('Index drop ignored (might not exist):', e.message);
+    }
+
+    await this.productModel.updateMany(
+      {},
+      { $unset: { id: "" } },
+    );
   }
 }

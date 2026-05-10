@@ -22,6 +22,7 @@ import {
 import { CartService } from './cart.service';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { CartDto } from './dto/cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User } from 'src/users/entities/user.entity';
@@ -36,9 +37,10 @@ export class CartController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Retrieve the authenticated user's shopping cart" })
-  @ApiResponse({ status: 200, description: "Successfully retrieved the user's cart." })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 200, description: "Successfully retrieved the user's cart.", type: CartDto })
+  @ApiResponse({ status: 401, description: 'Unauthorizedooo.' })
   async getMyCart(@GetUser() user: User) {
+    console.log("user", user)
     if (!user || !user._id) {
 
       throw new UnauthorizedException('User is not authenticated');
@@ -51,7 +53,7 @@ export class CartController {
   @Post('items')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Add a product to the cart or update its quantity if already present' })
-  @ApiResponse({ status: 200, description: 'Product added/updated in cart successfully.' })
+  @ApiResponse({ status: 200, description: 'Product added/updated in cart successfully.', type: CartDto })
   @ApiResponse({ status: 400, description: 'Invalid input or insufficient stock.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Product not found.' })
@@ -72,7 +74,7 @@ export class CartController {
     description: 'The ID of the product to update in the cart',
     type: String,
   })
-  @ApiResponse({ status: 200, description: 'Cart item quantity updated successfully.' })
+  @ApiResponse({ status: 200, description: 'Cart item quantity updated successfully.', type: CartDto })
   @ApiResponse({ status: 400, description: 'Invalid input or insufficient stock.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Product not found in cart.' })
@@ -95,7 +97,7 @@ export class CartController {
     description: 'The ID of the product to remove from the cart',
     type: String,
   })
-  @ApiResponse({ status: 204, description: 'Product removed from cart successfully.' })
+  @ApiResponse({ status: 200, description: 'Product removed from cart successfully.', type: CartDto })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Product not found in cart.' })
   async removeItemFromCart(@Param('productId') productId: string, @GetUser() user: User) {
@@ -110,16 +112,14 @@ export class CartController {
 
   @Delete()
   @ApiOperation({ summary: 'Clear all items from the shopping cart' })
-  @ApiResponse({ status: 204, description: 'Cart cleared successfully.' })
+  @ApiResponse({ status: 200, description: 'Cart cleared successfully.', type: CartDto })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async clearMyCart(@GetUser() user: User) {
     if (!user || !user._id) {
       throw new UnauthorizedException('User is not authenticated');
     }
-    console.log('yser', user)
 
     const updatedCart = await this.cartService.clearCart(user._id.toString());
-    console.log('upda', updatedCart)
     return updatedCart
   }
 }

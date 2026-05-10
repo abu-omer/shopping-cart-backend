@@ -38,6 +38,12 @@ export class CategoriesService {
   }
 
   async update(id: string, updateCategoryDto: UpdateCategoryDto) {
+    const { name, isActive } = updateCategoryDto
+    console.log("update", name, isActive)
+    const CategoryExist = await this.categoryModel.findOne({ name })
+    if (CategoryExist) {
+      throw new BadRequestException('category already exist')
+    }
     return await this.categoryModel.findByIdAndUpdate(id, updateCategoryDto, { new: true })
   }
 

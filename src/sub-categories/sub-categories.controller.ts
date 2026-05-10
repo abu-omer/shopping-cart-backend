@@ -34,7 +34,7 @@ export class SubCategoriesController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateSubCategoryDto: UpdateSubCategoryDto) {
-    return this.subCategoriesService.update(+id, updateSubCategoryDto);
+    return this.subCategoriesService.update(id, updateSubCategoryDto);
   }
 
   @Delete(':id')

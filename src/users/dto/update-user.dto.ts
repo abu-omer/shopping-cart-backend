@@ -5,7 +5,7 @@ import { CreateUserDto, UpdateAddressDto } from "./create-user.dto";
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
-  phoneNumber?: string;
+  phone?: string;
 
   @IsOptional()
   @IsArray()

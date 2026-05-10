@@ -1,57 +1,3 @@
-// import { IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
-// import { ObjectId } from 'mongoose';
-// import { ProductType } from '../entities/product.entity';
-
-// export class CreateProductDto {
-//   @IsNotEmpty()
-//   @IsString()
-//   name: string;
-
-//   @IsNotEmpty()
-//   @IsString()
-//   description: string;
-
-//   @IsNotEmpty()
-//   @IsNumber()
-//   price: number;
-//   @IsOptional()
-//   @IsNumber()
-//   stock?: number;
-//   @IsOptional()
-
-
-//   @IsOptional()
-//   @IsString()
-//   color?: string;
-
-//   @IsOptional()
-//   @IsString()
-//   size?: string;
-
-//   @IsEnum(ProductType)
-//   @IsOptional()
-//   productType?: ProductType;
-
-//   @IsOptional()
-//   @IsNumber()
-//   ratings?: number;
-
-//   @IsArray()
-//   @IsString({ each: true })
-//   @IsOptional()
-//   imageFiles?: string[];
-
-//   @IsOptional()
-//   review: string;
-
-//   @IsNotEmpty()
-//   @IsMongoId()
-//   categoriesId: ObjectId;
-
-//   @IsNotEmpty()
-//   @IsMongoId()
-//   subCategoriesId: ObjectId;
-// }
 
 
 import {
@@ -60,13 +6,16 @@ import {
   IsArray,
   IsOptional,
   Min,
+  Max,
   IsMongoId,
   IsUrl,
   ArrayMinSize,
   ArrayUnique,
   IsEnum,
+  ValidateNested,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger'; // For API documentation (optional but recommended)
+import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 
 enum ProductStatus {
@@ -75,13 +24,43 @@ enum ProductStatus {
   DISCONTINUED = 'discontinued',
 }
 
+class DimensionsDto {
+  @IsNumber()
+  @IsOptional()
+  width: number;
+
+  @IsNumber()
+  @IsOptional()
+  height: number;
+
+  @IsNumber()
+  @IsOptional()
+  depth: number;
+}
+
+class MetaDto {
+  @IsOptional()
+  createdAt: Date;
+
+  @IsOptional()
+  updatedAt: Date;
+
+  @IsString()
+  @IsOptional()
+  barcode: string;
+
+  @IsString()
+  @IsOptional()
+  qrCode: string;
+}
+
 export class CreateProductDto {
   @ApiProperty({
-    description: 'The name of the product',
+    description: 'The title of the product',
     example: 'Wireless Bluetooth Headphones',
   })
   @IsString()
-  name: string;
+  title: string;
 
   @ApiProperty({
     description: 'A detailed description of the product',
@@ -89,7 +68,8 @@ export class CreateProductDto {
       'High-fidelity wireless headphones with noise cancellation and long battery life.',
   })
   @IsString()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({
     description: 'The price of the product',
@@ -100,6 +80,25 @@ export class CreateProductDto {
   price: number;
 
   @ApiProperty({
+    description: 'The discount percentage of the product',
+    example: 10.5,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  discountPercentage?: number;
+
+  @ApiProperty({
+    description: 'The rating of the product',
+    example: 4.5,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  @IsOptional()
+  rating?: number;
+
+  @ApiProperty({
     description: 'The current stock quantity of the product',
     example: 50,
   })
@@ -108,26 +107,114 @@ export class CreateProductDto {
   stock: number;
 
   @ApiProperty({
-    description: 'An array of URLs for product images',
-    type: [String],
-    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsUrl({}, { each: true }) // Validate each item in the array as a URL
-  @IsOptional() // Images might be uploaded after product creation
-  imageFiles?: string[];
-
-  @ApiProperty({
     description: 'An array of tags associated with the product',
     type: [String],
     example: ['electronics', 'audio', 'headphones'],
   })
   @IsArray()
   @IsString({ each: true })
-  @ArrayUnique() // Ensure no duplicate tags
   @IsOptional()
   tags?: string[];
+
+  @ApiProperty({
+    description: 'The brand of the product',
+    example: 'Sony',
+  })
+  @IsString()
+  @IsOptional()
+  brand?: string;
+
+  @ApiProperty({
+    description: 'The SKU of the product',
+    example: 'SONY-WH1000XM4',
+  })
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @ApiProperty({
+    description: 'The weight of the product',
+    example: 250,
+  })
+  @IsNumber()
+  @IsOptional()
+  weight?: number;
+
+  @ApiProperty({
+    description: 'The dimensions of the product',
+    type: DimensionsDto,
+  })
+  @ValidateNested()
+  @Type(() => DimensionsDto)
+  @IsOptional()
+  dimensions?: DimensionsDto;
+
+  @ApiProperty({
+    description: 'The warranty information of the product',
+    example: '1 year warranty',
+  })
+  @IsString()
+  @IsOptional()
+  warrantyInformation?: string;
+
+  @ApiProperty({
+    description: 'The shipping information of the product',
+    example: 'Ships in 3-5 days',
+  })
+  @IsString()
+  @IsOptional()
+  shippingInformation?: string;
+
+  @ApiProperty({
+    description: 'The availability status of the product',
+    example: 'In Stock',
+  })
+  @IsString()
+  @IsOptional()
+  availabilityStatus?: string;
+
+  @ApiProperty({
+    description: 'The return policy of the product',
+    example: '30 days return policy',
+  })
+  @IsString()
+  @IsOptional()
+  returnPolicy?: string;
+
+  @ApiProperty({
+    description: 'The minimum order quantity of the product',
+    example: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  minimumOrderQuantity?: number;
+
+  @ApiProperty({
+    description: 'The metadata of the product',
+    type: MetaDto,
+  })
+  @ValidateNested()
+  @Type(() => MetaDto)
+  @IsOptional()
+  meta?: MetaDto;
+
+  @ApiProperty({
+    description: 'An array of URLs for product images',
+    type: [String],
+    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
+
+  @ApiProperty({
+    description: 'The thumbnail URL of the product',
+    example: 'https://example.com/thumbnail.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  thumbnail?: string;
 
   @ApiProperty({
     description: 'An array of MongoDB ObjectId strings for associated categories',
@@ -135,10 +222,10 @@ export class CreateProductDto {
     example: ['60d5ec49f1c7d2001c9b2f6b', '60d5ec49f1c7d2001c9b2f6c'],
   })
   @IsArray()
-  @IsMongoId({ each: true }) // Validate each item as a valid MongoDB ObjectId
-  @ArrayMinSize(1) // A product should belong to at least one category
+  @IsMongoId({ each: true })
+  @ArrayMinSize(1)
+  @IsOptional()
   categories?: (string | Types.ObjectId)[];
-  ; // These will be category IDs passed from the frontend
 
   @ApiProperty({
     description: 'The status of the product (e.g., available, out_of_stock)',

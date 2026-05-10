@@ -22,6 +22,15 @@ export class Review {
 
   @Prop({ type: String, trim: true, required: true })
   comment: string;
+
+  @Prop({ type: String, trim: true })
+  reviewerName?: string;
+
+  @Prop({ type: String, trim: true })
+  reviewerEmail?: string;
+
+  @Prop({ type: Date, default: Date.now })
+  date?: Date;
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
